@@ -1,0 +1,65 @@
+### ====================================================================
+### PayVault - Review 1: REST Client Verification
+### Target Services: AuthService (Direct: :8080) & API Gateway (:8000)
+### ====================================================================
+
+@gatewayUrl = http://localhost:8000
+@authServiceUrl = http://localhost:8080
+
+### --------------------------------------------------------------------
+### 1. User Registration (Via API Gateway)
+### --------------------------------------------------------------------
+# @name registerUser
+POST {{gatewayUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Sohan Kumar",
+  "email": "user@example.com",
+  "password": "Secure123"
+}
+
+### --------------------------------------------------------------------
+### 1.1 User Registration (Direct to AuthService)
+### --------------------------------------------------------------------
+POST {{authServiceUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Alex Mercer",
+  "email": "alex@example.com",
+  "password": "Password@123"
+}
+
+### --------------------------------------------------------------------
+### 2. User Login & Obtain JWT Token (Via API Gateway)
+### --------------------------------------------------------------------
+# @name loginUser
+POST {{gatewayUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Secure123"
+}
+
+### Store token from response:
+@jwtToken = {{loginUser.response.body.token}}
+
+### --------------------------------------------------------------------
+### 2.1 User Login (Direct to AuthService)
+### --------------------------------------------------------------------
+POST {{authServiceUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alex@example.com",
+  "password": "Password@123"
+}
+
+### --------------------------------------------------------------------
+### 3. Access Protected Route with Bearer Token
+### --------------------------------------------------------------------
+GET {{gatewayUrl}}/api/wallet/1
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
