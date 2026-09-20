@@ -176,38 +176,88 @@ curl -X GET http://localhost:8000/api/wallet/1 \
 
 ---
 
+## System Requirements & Dependencies
+
+### 1. Environment Prerequisites
+
+| Requirement | Supported Version | Purpose |
+| :--- | :--- | :--- |
+| **Java JDK** | 25 (Compatible with 17+) | Core runtime for Spring Boot 4 / Java microservices |
+| **Apache Maven** | 3.9+ | Build and dependency lifecycle manager |
+| **PostgreSQL** | 16+ (Port: `5433`) | Relational persistence store for users, wallets, and transactions |
+| **Docker & Docker Compose** | Latest (Optional) | Fast containerized startup for PostgreSQL |
+
+### 2. Multi-Module Root Aggregator (`pom.xml`)
+
+PayVault provides a top-level aggregator [`pom.xml`](pom.xml) enabling you to resolve, download, and build all dependencies across the entire microservices ecosystem with a single command:
+
+```bash
+# Resolve and download all dependencies for all microservices in one go:
+mvn dependency:resolve
+
+# Or build and package all microservices simultaneously:
+mvn clean install -DskipTests
+```
+
+### 3. Microservice Dependency Manifest
+
+The table below lists the dependencies defined and loaded in each microservice's `pom.xml`:
+
+| Microservice | Core Dependencies Loaded | Purpose |
+| :--- | :--- | :--- |
+| **PayVault Server** | • `spring-cloud-starter-netflix-eureka-server`<br>• `spring-boot-starter-webmvc`<br>• `spring-boot-starter-actuator` | Service registry, health heartbeats, and cluster discovery |
+| **GatewayService** | • `spring-cloud-starter-gateway-server-webmvc`<br>• `spring-cloud-starter-netflix-eureka-client`<br>• `spring-cloud-starter-loadbalancer`<br>• `spring-boot-starter-actuator` | Reverse proxy routing, client load balancing, and route predicates |
+| **AuthService1** | • `spring-boot-starter-webmvc`<br>• `spring-boot-starter-security`<br>• `spring-boot-starter-data-jpa`<br>• `org.postgresql:postgresql`<br>• `io.jsonwebtoken:jjwt-api:0.12.6`<br>• `io.jsonwebtoken:jjwt-impl:0.12.6`<br>• `io.jsonwebtoken:jjwt-jackson:0.12.6`<br>• `spring-cloud-starter-netflix-eureka-client` | User registration, password encryption (BCrypt), JWT token signing and verification, JPA database mapping |
+| **WalletService** | • `spring-boot-starter-webmvc`<br>• `spring-boot-starter-data-jpa`<br>• `org.postgresql:postgresql`<br>• `spring-cloud-starter-netflix-eureka-client`<br>• `spring-boot-starter-actuator` | Digital wallet accounts, balance queries and updates, transactional persistence |
+| **TransactionService** | • `spring-boot-starter-webmvc`<br>• `spring-boot-starter-data-jpa`<br>• `org.postgresql:postgresql`<br>• `spring-cloud-starter-netflix-eureka-client`<br>• `spring-boot-starter-actuator` | Money transfers, idempotency key checks, audit transaction logs |
+
+### 4. Infrastructure Dependencies (Docker Compose)
+
+Launch the required PostgreSQL instance with the pre-configured `payvault` database and credentials (`postgres` / `root` on port `5433`) using the bundled [`docker-compose.yml`](docker-compose.yml):
+
+```bash
+docker compose up -d
+```
+
+---
+
 ## Local Development & Setup
 
 ### 1. Prerequisites
 - **JDK 25** (or compatible JDK 17+)
-- **PostgreSQL** running on port `5433` (or configured port) with database `payvault`
+- **PostgreSQL** running on port `5433` (or configured port) with database `payvault` (or run `docker compose up -d`)
 - **Maven 3.9+**
 
 ### 2. Startup Order
 To ensure proper service discovery and routing, start the microservices in the following sequence:
 
-1. **Service Registry (Eureka)**:
+1. **Start Database (if using Docker)**:
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Service Registry (Eureka)**:
    ```bash
    cd PayVault
    ./mvnw spring-boot:run
    ```
    *Dashboard available at:* `http://localhost:9000`
 
-2. **API Gateway**:
+3. **API Gateway**:
    ```bash
    cd GatewayService
    ./mvnw spring-boot:run
    ```
    *Gateway listening on:* `http://localhost:8000`
 
-3. **Authentication Service**:
+4. **Authentication Service**:
    ```bash
    cd AuthService1
    ./mvnw spring-boot:run
    ```
    *Service listening on:* `http://localhost:8080`
 
-4. **Wallet & Transaction Services**:
+5. **Wallet & Transaction Services**:
    ```bash
    cd WalletService
    ./mvnw spring-boot:run
@@ -223,3 +273,4 @@ To ensure proper service discovery and routing, start the microservices in the f
 
 Built for secure, transparent, and resilient digital financial transactions.
 Distributed under the MIT License.
+
