@@ -1,65 +1,151 @@
 ### ====================================================================
-### PayVault - Review 1: REST Client Verification
-### Target Services: AuthService (Direct: :8080) & API Gateway (:8000)
+### PayVault — Review 1: Faculty Demo Checklist & REST Client Test
+### Target: Eureka (:9000), Gateway (:8000), Auth (:8080), Wallet (:8082), Txn (:8083)
 ### ====================================================================
 
 @gatewayUrl = http://localhost:8000
 @authServiceUrl = http://localhost:8080
+@walletServiceUrl = http://localhost:8082
+@txnServiceUrl = http://localhost:8083
 
-### --------------------------------------------------------------------
-### 1. User Registration (Via API Gateway)
-### --------------------------------------------------------------------
-# @name registerUser
+### ====================================================================
+### 1. EUREKA / SERVICE DISCOVERY
+### Open in browser: http://localhost:9000
+### Verify Registered Instances:
+###   - AUTHSERVICE1       -> 8080
+###   - GATEWAYSERVICE     -> 8000
+###   - TRANSACTIONSERVICE -> 8083
+###   - WALLETSERVICE      -> 8082
+### ====================================================================
+
+
+### ====================================================================
+### 2. JWT AUTHENTICATION
+### ====================================================================
+
+### 2.1 Register User (ReviewUser)
 POST {{gatewayUrl}}/api/auth/register
 Content-Type: application/json
 
 {
-  "name": "Sohan Kumar",
-  "email": "user@example.com",
-  "password": "Secure123"
+    "name": "ReviewUser",
+    "email": "reviewuser@gmail.com",
+    "password": "123456"
 }
 
-### --------------------------------------------------------------------
-### 1.1 User Registration (Direct to AuthService)
-### --------------------------------------------------------------------
-POST {{authServiceUrl}}/api/auth/register
+### 2.2 Register User (Ashish - Sender)
+POST {{gatewayUrl}}/api/auth/register
 Content-Type: application/json
 
 {
-  "name": "Alex Mercer",
-  "email": "alex@example.com",
-  "password": "Password@123"
+    "name": "Ashish",
+    "email": "ashish@gmail.com",
+    "password": "123456"
 }
 
-### --------------------------------------------------------------------
-### 2. User Login & Obtain JWT Token (Via API Gateway)
-### --------------------------------------------------------------------
-# @name loginUser
+### 2.3 Register User (Piyush - Receiver)
+POST {{gatewayUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+    "name": "Piyush",
+    "email": "piyush@gmail.com",
+    "password": "123456"
+}
+
+### 2.4 Login (Ashish) -> Obtain JWT Token
+# @name loginAshish
 POST {{gatewayUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "Secure123"
+    "email": "ashish@gmail.com",
+    "password": "123456"
 }
 
-### Store token from response:
-@jwtToken = {{loginUser.response.body.token}}
+### Store Ashish's Bearer token for protected requests:
+@jwtToken = {{loginAshish.response.body.token}}
 
-### --------------------------------------------------------------------
-### 2.1 User Login (Direct to AuthService)
-### --------------------------------------------------------------------
+
+### ====================================================================
+### 3. WALLET SERVICE THROUGH GATEWAY
+### ====================================================================
+
+### 3.1 Get Wallet (User 1 - Ashish)
+GET {{gatewayUrl}}/api/wallet/1
+Authorization: Bearer {{jwtToken}}
+
+### 3.2 Add Money (User 1 - Ashish: +1000)
+POST {{gatewayUrl}}/api/wallet/add/1?amount=1000
+Authorization: Bearer {{jwtToken}}
+
+### 3.3 Check Balance (User 1 - Ashish: Should reflect updated balance)
+GET {{gatewayUrl}}/api/wallet/1
+Authorization: Bearer {{jwtToken}}
+
+
+### ====================================================================
+### 4. TRANSACTION SERVICE THROUGH GATEWAY
+### ====================================================================
+
+### 4.1 Create Transaction (Transfer from Ashish [id: 1] to Piyush [id: 2])
+POST {{gatewayUrl}}/api/transactions
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+    "senderId": 1,
+    "receiverId": 2,
+    "amount": 1000,
+    "status": "SUCCESS"
+}
+
+### 4.2 Get All Transactions
+GET {{gatewayUrl}}/api/transactions
+Authorization: Bearer {{jwtToken}}
+
+
+### ====================================================================
+### 5. DIRECT SERVICE VS GATEWAY COMPARISON (Show Faculty)
+### ====================================================================
+
+### 5.1 DIRECT: Auth Service (:8080)
 POST {{authServiceUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "alex@example.com",
-  "password": "Password@123"
+    "email": "ashish@gmail.com",
+    "password": "123456"
 }
 
-### --------------------------------------------------------------------
-### 3. Access Protected Route with Bearer Token
-### --------------------------------------------------------------------
-GET {{gatewayUrl}}/api/wallet/1
-Authorization: Bearer {{jwtToken}}
+### 5.2 THROUGH GATEWAY: Auth Service (:8000)
+POST {{gatewayUrl}}/api/auth/login
 Content-Type: application/json
+
+{
+    "email": "ashish@gmail.com",
+    "password": "123456"
+}
+
+### 5.3 DIRECT: Wallet Service (:8082)
+GET {{walletServiceUrl}}/api/wallet/1
+
+### 5.4 THROUGH GATEWAY: Wallet Service (:8000)
+GET {{gatewayUrl}}/api/wallet/1
+
+### 5.5 DIRECT: Transaction Service (:8083)
+GET {{txnServiceUrl}}/api/transactions
+
+### 5.6 THROUGH GATEWAY: Transaction Service (:8000)
+GET {{gatewayUrl}}/api/transactions
+
+
+### ====================================================================
+### 6. POSTGRESQL — VERIFY DATABASE RECORDS
+### Database: payvault (Port: 5433)
+### Run in psql / DBeaver / pgAdmin:
+###
+### SELECT * FROM public.users ORDER BY id ASC;
+### SELECT * FROM public.wallets ORDER BY id ASC;
+### SELECT * FROM public.transactions ORDER BY id ASC;
+### ====================================================================
