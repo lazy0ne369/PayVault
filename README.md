@@ -441,8 +441,8 @@ To ensure proper service discovery and routing, start the microservices in the f
 ## Authors & Contributors
 
 - **Sohan Kumar Sahu**
-- **Ashish**
-- **Piyush**
+- **Ashish Dohare**
+- **Piyush Pattanayak**
 
 ---
 
